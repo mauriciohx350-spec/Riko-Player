@@ -1,17 +1,51 @@
-# riko_player
+# Riko Player
 
-A new Flutter project.
+Aplicativo de reprodução de músicas para Android, desenvolvido com Flutter e Dart.
 
-## Getting Started
+## Sobre o projeto
 
-This project is a starting point for a Flutter application.
+O Riko Player é um projeto pessoal que busca oferecer uma experiência simples, moderna e intuitiva para ouvir músicas armazenadas localmente no dispositivo.
 
-A few resources to get you started if this is your first Flutter project:
+O objetivo é desenvolver um reprodutor de música com uma interface organizada, controles acessíveis e foco na experiência do usuário.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+## Tecnologias utilizadas
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- Flutter
+- Dart
+
+## Pré-requisitos
+
+- Flutter SDK
+- Dart SDK
+- Android Studio ou outro ambiente compatível
+- Dispositivo Android ou emulador configurado
+
+## Instalação
+
+Clone o repositório:
+
+```bash
+git clone URL_DO_SEU_REPOSITORIO
+```
+
+Entre na pasta do projeto:
+
+```bash
+cd riko_player
+```
+
+Instale as dependências:
+
+```bash
+flutter pub get
+```
+
+Execute o aplicativo em um dispositivo conectado:
+
+```bash
+flutter run
+```
+
+## Status do projeto
+
+Em desenvolvimento.
