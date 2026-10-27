@@ -1,30 +1,37 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:riko_player/main.dart';
+import 'package:riko_player/app/app.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('Displays the temporary Riko Player screen', (tester) async {
+    await tester.pumpWidget(const RikoPlayerApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    expect(find.text('Riko Player'), findsOneWidget);
+    expect(
+      find.ancestor(
+        of: find.text('Riko Player'),
+        matching: find.byType(Center),
+      ),
+      findsOneWidget,
+    );
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
+    expect(app.title, 'Riko Player');
+    expect(app.debugShowCheckedModeBanner, isFalse);
+    expect(app.themeMode, ThemeMode.dark);
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    final textFinder = find.text('Riko Player');
+    final theme = Theme.of(tester.element(textFinder));
+    expect(theme.brightness, Brightness.dark);
+    expect(theme.useMaterial3, isTrue);
+    expect(theme.colorScheme.primary, const Color(0xFF9B8AFB));
+    expect(theme.scaffoldBackgroundColor, const Color(0xFF101116));
+    expect(theme.colorScheme.surface, const Color(0xFF1C1D25));
+    expect(theme.colorScheme.onSurface, const Color(0xFFF5F5F7));
+    expect(theme.colorScheme.onSurfaceVariant, const Color(0xFFA3A3AD));
+    expect(
+      DefaultTextStyle.of(tester.element(textFinder)).style.color,
+      const Color(0xFFF5F5F7),
+    );
   });
 }
