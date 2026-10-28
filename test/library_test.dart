@@ -9,6 +9,7 @@ import 'package:riko_player/features/library/data/music_library_service.dart';
 import 'package:riko_player/features/library/logic/library_controller.dart';
 import 'package:riko_player/features/library/logic/song_details.dart';
 import 'package:riko_player/features/library/view/library_content.dart';
+import 'package:riko_player/features/library/view/widgets/song_tile.dart';
 
 // Dados restritos aos testes; o aplicativo consulta somente o MediaStore.
 const tracks = [
@@ -22,6 +23,13 @@ class TestMusicService extends MusicLibraryService {
   Completer<List<SongModel>>? pending;
   bool fail = false;
   bool settingsOpened = false;
+  int clearCount = 0;
+  @override
+  void clearArtwork() {
+    clearCount++;
+    super.clearArtwork();
+  }
+
   int queryCount = 0;
   int requestCount = 0;
 
@@ -200,6 +208,95 @@ void main() {
     await tester.pumpAndSettle();
     expect(service.queryCount, 2);
     expect(service.requestCount, 1);
+  });
+
+  testWidgets('Mantém lista e estado durante atualização e filtragem', (
+    tester,
+  ) async {
+    final service = TestMusicService();
+    await tester.pumpWidget(screen(service));
+    await tester.pumpAndSettle();
+    final tile = find.byKey(const ValueKey(2));
+    final original = tester.state(tile);
+    service.pending = Completer<List<SongModel>>();
+    await tester.tap(find.byTooltip('Atualizar biblioteca'));
+    await tester.pump();
+    expect(find.text('Horizonte'), findsOneWidget);
+    expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    expect(tester.state(tile), same(original));
+    await tester.enterText(find.byType(TextField), 'lua');
+    await tester.pump();
+    expect(tester.state(tile), same(original));
+    service.pending!.complete([
+      SongModel(id: 1, title: tracks[0].title, artist: tracks[0].artist),
+      SongModel(id: 2, title: tracks[1].title, artist: tracks[1].artist),
+    ]);
+    await tester.pumpAndSettle();
+    expect(find.byType(LinearProgressIndicator), findsNothing);
+    expect(tester.state(tile), same(original));
+    // Limpar a pesquisa altera novamente o índice do item preservado.
+    await tester.enterText(find.byType(TextField), '');
+    await tester.pumpAndSettle();
+    expect(tester.state(tile), same(original));
+  });
+
+  testWidgets('Revogação remove lista existente e limpa capas', (tester) async {
+    final service = TestMusicService();
+    await tester.pumpWidget(screen(service));
+    await tester.pumpAndSettle();
+    service.permission = PermissionStatus.denied;
+    await tester.tap(find.byTooltip('Atualizar biblioteca'));
+    await tester.pumpAndSettle();
+    expect(find.text('Horizonte'), findsNothing);
+    expect(find.byType(SongTile), findsNothing);
+    expect(find.text('Permita o acesso às suas músicas'), findsOneWidget);
+    expect(service.clearCount, 1);
+    expect(service.queryCount, 1);
+  });
+
+  testWidgets('Atualização para biblioteca vazia remove itens antigos', (
+    tester,
+  ) async {
+    final service = TestMusicService();
+    await tester.pumpWidget(screen(service));
+    await tester.pumpAndSettle();
+    service.result = [];
+    await tester.tap(find.byTooltip('Atualizar biblioteca'));
+    await tester.pumpAndSettle();
+    expect(find.byType(SongTile), findsNothing);
+    expect(find.text('Nenhuma música encontrada'), findsOneWidget);
+  });
+
+  testWidgets('Falha de atualização preserva o tratamento de erro', (
+    tester,
+  ) async {
+    final service = TestMusicService();
+    await tester.pumpWidget(screen(service));
+    await tester.pumpAndSettle();
+    service.fail = true;
+    await tester.tap(find.byTooltip('Atualizar biblioteca'));
+    await tester.pumpAndSettle();
+    expect(find.byType(SongTile), findsNothing);
+    expect(find.text('Não foi possível ler as músicas'), findsOneWidget);
+    expect(service.clearCount, 1);
+  });
+
+  test('Revogação durante consulta não restaura músicas antigas', () async {
+    final service = TestMusicService();
+    final controller = LibraryController(service);
+    addTearDown(controller.dispose);
+    await controller.load();
+    service.pending = Completer<List<SongModel>>();
+    final updating = controller.load();
+    await Future<void>.delayed(Duration.zero);
+    expect(controller.isRefreshing, isTrue);
+    expect(controller.songs.length, 2);
+    service.permission = PermissionStatus.denied;
+    service.pending!.complete(tracks);
+    await updating;
+    expect(controller.status, LibraryStatus.denied);
+    expect(controller.songs, isEmpty);
+    expect(service.clearCount, 1);
   });
 }
 

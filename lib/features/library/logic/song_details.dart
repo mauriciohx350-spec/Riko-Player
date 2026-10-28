@@ -1,6 +1,10 @@
 import 'package:device_audio_query/device_audio_query.dart';
 
+typedef SongArtworkKey = (int, int?, int?, int?, String?);
+
 extension SongDetails on SongModel {
+  SongArtworkKey get artworkKey => (id, albumId, dateModified, size, data);
+
   String get displayTitle =>
       title.trim().isEmpty || title == 'Unknown' ? 'Música sem título' : title;
 

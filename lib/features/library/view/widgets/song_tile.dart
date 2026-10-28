@@ -28,7 +28,8 @@ class _SongTileState extends State<SongTile> {
   @override
   void didUpdateWidget(covariant SongTile oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.song != widget.song || oldWidget.service != widget.service) {
+    if (oldWidget.song.artworkKey != widget.song.artworkKey ||
+        oldWidget.service != widget.service) {
       _artwork = widget.service.artwork(widget.song);
     }
   }

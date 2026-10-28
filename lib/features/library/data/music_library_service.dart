@@ -2,6 +2,9 @@ import 'package:device_audio_query/device_audio_query.dart';
 import 'package:flutter/foundation.dart';
 import 'package:permission_handler/permission_handler.dart' as permissions;
 
+import '../logic/song_details.dart';
+import 'artwork_cache.dart';
+
 /// Isola o acesso ao MediaStore e às permissões da interface.
 class MusicLibraryService {
   final DeviceAudioQuery _query = DeviceAudioQuery();
@@ -19,7 +22,18 @@ class MusicLibraryService {
 
   Future<List<SongModel>> songs() => _query.querySongs();
 
-  Future<Uint8List?> artwork(SongModel song) async {
+  final _artworkCache = ArtworkCache<SongArtworkKey>();
+
+  Future<Uint8List?> artwork(SongModel song) =>
+      _artworkCache.get(song.artworkKey, () => _loadArtwork(song));
+
+  // Mantém capas inalteradas e invalida músicas removidas ou modificadas.
+  void retainArtworkFor(List<SongModel> songs) =>
+      _artworkCache.retainKeys(songs.map((song) => song.artworkKey).toSet());
+
+  void clearArtwork() => _artworkCache.clear();
+
+  Future<Uint8List?> _loadArtwork(SongModel song) async {
     try {
       final audio = await _query.queryArtwork(
         id: song.id,

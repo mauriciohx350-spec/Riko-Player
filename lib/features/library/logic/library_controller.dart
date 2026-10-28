@@ -16,11 +16,16 @@ class LibraryController extends ChangeNotifier {
   List<SongModel> _songs = const [];
   List<SongModel> _visibleSongs = const [];
   String _search = '';
+  Map<int, int> _songIndices = const {};
   bool _loading = false;
   bool _disposed = false;
 
   List<SongModel> get songs => _visibleSongs;
   bool get isEmpty => _songs.isEmpty;
+  bool get isLoading => _loading;
+  bool get isRefreshing => _loading && status == LibraryStatus.ready;
+
+  int? indexOfSong(int id) => _songIndices[id];
 
   void search(String value) {
     _search = value.trim().toLowerCase();
@@ -36,17 +41,27 @@ class LibraryController extends ChangeNotifier {
             song.displayArtist.toLowerCase().contains(_search),
       ),
     );
+    _songIndices = {
+      for (var i = 0; i < _visibleSongs.length; i++) _visibleSongs[i].id: i,
+    };
+  }
+
+  void _clearSongs() {
+    _songs = const [];
+    _filter();
+    service.clearArtwork();
   }
 
   Future<void> load({bool requestPermission = false}) async {
     // O diálogo de permissão também dispara eventos de ciclo de vida.
     if (_loading || _disposed) return;
     _loading = true;
-    status = LibraryStatus.loading;
+    if (status != LibraryStatus.ready) status = LibraryStatus.loading;
     actionError = null;
     notifyListeners();
     try {
       if (!service.isSupported) {
+        _clearSongs();
         status = LibraryStatus.unsupported;
         return;
       }
@@ -54,20 +69,28 @@ class LibraryController extends ChangeNotifier {
       if (_disposed) return;
       permanentlyDenied = access == PermissionStatus.deniedForever;
       if (access != PermissionStatus.granted) {
-        _songs = const [];
-        _filter();
+        _clearSongs();
         status = LibraryStatus.denied;
         return;
       }
       final result = await service.songs();
       if (_disposed) return;
+      // A permissão pode ter sido revogada enquanto a consulta estava pendente.
+      final currentAccess = await service.access(request: false);
+      if (_disposed) return;
+      if (currentAccess != PermissionStatus.granted) {
+        permanentlyDenied = currentAccess == PermissionStatus.deniedForever;
+        _clearSongs();
+        status = LibraryStatus.denied;
+        return;
+      }
+      service.retainArtworkFor(result);
       _songs = List.unmodifiable(result);
       _filter();
       status = LibraryStatus.ready;
     } catch (_) {
       if (!_disposed) {
-        _songs = const [];
-        _filter();
+        _clearSongs();
         status = LibraryStatus.error;
       }
     } finally {
@@ -93,6 +116,7 @@ class LibraryController extends ChangeNotifier {
 
   @override
   void dispose() {
+    service.clearArtwork();
     _disposed = true;
     super.dispose();
   }

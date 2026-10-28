@@ -117,7 +117,7 @@ class _LibraryContentState extends State<LibraryContent>
     return ListenableBuilder(
       listenable: _controller,
       builder: (context, child) {
-        final loading = _controller.status == LibraryStatus.loading;
+        final loading = _controller.isLoading;
         final showSongs =
             _controller.status == LibraryStatus.ready &&
             _controller.songs.isNotEmpty;
@@ -147,7 +147,15 @@ class _LibraryContentState extends State<LibraryContent>
                           ),
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        height: 4,
+                        child: _controller.isRefreshing
+                            ? const LinearProgressIndicator(
+                                semanticsLabel: 'Atualizando biblioteca',
+                              )
+                            : null,
+                      ),
                       Row(
                         children: [
                           Expanded(
@@ -173,6 +181,10 @@ class _LibraryContentState extends State<LibraryContent>
               ),
               if (showSongs)
                 SliverList.builder(
+                  key: const ValueKey('library-songs'),
+                  findChildIndexCallback: (key) => key is ValueKey<int>
+                      ? _controller.indexOfSong(key.value)
+                      : null,
                   itemCount: _controller.songs.length,
                   itemBuilder: (context, index) {
                     final song = _controller.songs[index];
