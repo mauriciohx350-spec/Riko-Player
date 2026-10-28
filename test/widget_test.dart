@@ -1,12 +1,42 @@
 import 'package:flutter/material.dart';
+
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riko_player/app/app.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  setUp(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(const MethodChannel('device_audio_query'), (
+          call,
+        ) async {
+          switch (call.method) {
+            case 'checkPermissionStatus':
+            case 'requestPermission':
+              return 0;
+            case 'querySongs':
+              return <Map<String, Object?>>[];
+            default:
+              throw PlatformException(
+                code: 'unexpected_call',
+                message: call.method,
+              );
+          }
+        });
+  });
+  tearDown(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('device_audio_query'),
+          null,
+        );
+  });
   testWidgets('Shows the empty library with the global dark theme', (
     tester,
   ) async {
     await tester.pumpWidget(const RikoPlayerApp());
+    await tester.pumpAndSettle();
 
     expect(find.text('Riko Player'), findsOneWidget);
     expect(find.text('Suas músicas'), findsOneWidget);
@@ -37,6 +67,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(const RikoPlayerApp());
+    await tester.pumpAndSettle();
     expect(find.text('Pesquisar músicas'), findsOneWidget);
     await tester.enterText(find.byType(TextField), 'Minha música');
 
@@ -57,6 +88,7 @@ void main() {
 
   testWidgets('Opens settings and returns to the library', (tester) async {
     await tester.pumpWidget(const RikoPlayerApp());
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Configurações'));
     await tester.pumpAndSettle();
 
@@ -84,6 +116,7 @@ void main() {
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
 
     await tester.pumpWidget(const RikoPlayerApp());
+    await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
 
     await tester.showKeyboard(find.byType(TextField));
