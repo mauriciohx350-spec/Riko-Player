@@ -1,23 +1,37 @@
 # Riko Player
 
-Aplicativo de reprodução de músicas para Android, desenvolvido com Flutter e Dart.
+Aplicativo de reprodução de músicas locais para Android, desenvolvido com Flutter e Dart.
 
 ## Sobre o projeto
 
-O Riko Player é um projeto pessoal que busca oferecer uma experiência simples, moderna e intuitiva para ouvir músicas armazenadas localmente no dispositivo.
+O Riko Player é um projeto pessoal que tem como objetivo oferecer uma experiência simples, moderna e intuitiva para ouvir músicas armazenadas no dispositivo Android.
 
-O objetivo é desenvolver um reprodutor de música com uma interface organizada, controles acessíveis e foco na experiência do usuário.
+O aplicativo está sendo desenvolvido com foco em uma interface organizada, navegação intuitiva e facilidade de uso.
 
 ## Tecnologias utilizadas
 
 - Flutter
 - Dart
+- Material Design 3
+
+## Estado atual
+
+A estrutura inicial do aplicativo já foi implementada, incluindo:
+
+- Organização da estrutura do projeto.
+- Interface com tema escuro e identidade visual própria.
+- Tela inicial da biblioteca de músicas.
+- Campo de pesquisa na biblioteca.
+- Navegação entre Biblioteca e Playlists.
+- Tela inicial de Configurações.
+
+A leitura de arquivos de áudio e as funcionalidades de reprodução ainda estão em desenvolvimento.
 
 ## Pré-requisitos
 
 - Flutter SDK
-- Dart SDK
-- Android Studio ou outro ambiente compatível
+- Android SDK
+- Android Studio ou VS Code
 - Dispositivo Android ou emulador configurado
 
 ## Instalação
@@ -25,13 +39,13 @@ O objetivo é desenvolver um reprodutor de música com uma interface organizada,
 Clone o repositório:
 
 ```bash
-git clone URL_DO_SEU_REPOSITORIO
+git clone https://github.com/mauriciohx350-spec/Riko-Player.git
 ```
 
-Entre na pasta do projeto:
+Acesse a pasta do projeto:
 
 ```bash
-cd riko_player
+cd Riko-Player
 ```
 
 Instale as dependências:
@@ -48,4 +62,4 @@ flutter run
 
 ## Status do projeto
 
-Em desenvolvimento.
+Em desenvolvimento. A interface inicial está implementada e as funcionalidades de reprodução musical serão adicionadas progressivamente.
