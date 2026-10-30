@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../playback/view/miniplayer.dart';
+
 import '../../settings/view/settings_page.dart';
 import 'library_content.dart';
 import 'widgets/library_message.dart';
@@ -64,21 +66,27 @@ class _LibraryPageState extends State<LibraryPage> {
           ],
         ),
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) {
-          FocusManager.instance.primaryFocus?.unfocus();
-          setState(() => _selectedIndex = index);
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.library_music_outlined),
-            selectedIcon: Icon(Icons.library_music),
-            label: 'Biblioteca',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.queue_music),
-            label: 'Playlists',
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Miniplayer(),
+          NavigationBar(
+            selectedIndex: _selectedIndex,
+            onDestinationSelected: (index) {
+              FocusManager.instance.primaryFocus?.unfocus();
+              setState(() => _selectedIndex = index);
+            },
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.library_music_outlined),
+                selectedIcon: Icon(Icons.library_music),
+                label: 'Biblioteca',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.queue_music),
+                label: 'Playlists',
+              ),
+            ],
           ),
         ],
       ),

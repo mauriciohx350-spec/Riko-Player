@@ -10,6 +10,7 @@ import 'package:riko_player/features/library/logic/library_controller.dart';
 import 'package:riko_player/features/library/logic/song_details.dart';
 import 'package:riko_player/features/library/view/library_content.dart';
 import 'package:riko_player/features/library/view/widgets/song_tile.dart';
+import 'package:riko_player/features/library/view/widgets/song_artwork.dart';
 
 // Dados restritos aos testes; o aplicativo consulta somente o MediaStore.
 const tracks = [
@@ -216,7 +217,10 @@ void main() {
     final service = TestMusicService();
     await tester.pumpWidget(screen(service));
     await tester.pumpAndSettle();
-    final tile = find.byKey(const ValueKey(2));
+    final tile = find.descendant(
+      of: find.byKey(const ValueKey(2)),
+      matching: find.byType(SongArtwork),
+    );
     final original = tester.state(tile);
     service.pending = Completer<List<SongModel>>();
     await tester.tap(find.byTooltip('Atualizar biblioteca'));
