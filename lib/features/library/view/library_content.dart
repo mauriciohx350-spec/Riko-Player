@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../playback/view/playback_scope.dart';
+
 import '../data/music_library_service.dart';
 import '../logic/library_controller.dart';
 import 'widgets/library_message.dart';
@@ -21,7 +23,13 @@ class _LibraryContentState extends State<LibraryContent>
   @override
   void initState() {
     super.initState();
-    _controller = LibraryController(widget.service ?? MusicLibraryService());
+    _controller = LibraryController(
+      widget.service ??
+          context
+              .getInheritedWidgetOfExactType<PlaybackScope>()
+              ?.libraryService ??
+          MusicLibraryService(),
+    );
     WidgetsBinding.instance.addObserver(this);
     _controller.load(requestPermission: true);
   }
@@ -192,6 +200,9 @@ class _LibraryContentState extends State<LibraryContent>
                       key: ValueKey(song.id),
                       song: song,
                       service: _controller.service,
+                      onTap: () =>
+                          PlaybackScope.maybeOf(context)?.controller
+                              .playQueue(_controller.songs, index),
                     );
                   },
                 )
