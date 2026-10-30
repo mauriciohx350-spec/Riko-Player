@@ -11,6 +11,15 @@ class FakePlaybackService implements PlaybackService {
   final length = StreamController<Duration?>.broadcast(sync: true);
   final failures = StreamController<Object>.broadcast(sync: true);
   final loaded = <Uri>[];
+  final interrupted = StreamController<void>.broadcast(sync: true);
+  @override
+  Stream<void> get interruptions => interrupted.stream;
+  int stops = 0;
+  @override
+  Future<void> stop() async {
+    stops++;
+  }
+
   int plays = 0;
   int pauses = 0;
   int disposals = 0;
@@ -50,6 +59,7 @@ class FakePlaybackService implements PlaybackService {
   @override
   Future<void> dispose() async {
     disposals++;
+    await interrupted.close();
     await state.close();
     await progress.close();
     await length.close();
@@ -170,22 +180,76 @@ void main() {
     pending.complete(const Duration(seconds: 20));
     await Future.wait([first, second]);
     expect(controller.song?.id, 2);
+    await tick();
     expect(service.plays, 1);
   });
-  test('segundo plano pausa inclusive durante carregamento', () async {
+  test('pausa durante carregamento impede retomada automática', () async {
     service.pending = Completer<Duration?>();
     final loading = controller.playQueue(songs, 0);
     await tick();
-    controller.setForeground(false);
+    service.interrupted.add(null);
     service.pending!.complete(const Duration(seconds: 60));
     await loading;
+    await tick();
+    expect(controller.playing, isFalse);
     expect(service.plays, 0);
-    controller.setForeground(true);
-    expect(controller.playing, isFalse);
-    await controller.toggle();
+    await controller.play();
+    await tick();
+    await tick();
     expect(service.plays, 1);
-    controller.setForeground(false);
+  });
+  test(
+    'play e pause explícitos são idempotentes e não alternam estado',
+    () async {
+      await controller.playQueue(songs, 0);
+      await controller.play();
+      await tick();
+      await tick();
+      expect(service.plays, 1);
+      await controller.pause();
+      await controller.pause();
+      expect(controller.playing, isFalse);
+      await controller.play();
+      await controller.pause();
+      await tick();
+      await tick();
+      expect(service.plays, 1);
+    },
+  );
+  test('parar cancela seleção pendente e permite nova sessão', () async {
+    service.pending = Completer<Duration?>();
+    final loading = controller.playQueue(songs, 0);
+    await tick();
+    await controller.stop();
+    final pending = service.pending!;
+    service.pending = null;
+    pending.complete(const Duration(seconds: 60));
+    await loading;
+    await tick();
+    expect(controller.stopped, isTrue);
+    expect(service.plays, 0);
+    await controller.play();
+    await tick();
+    expect(controller.stopped, isFalse);
+    await tick();
+    expect(service.plays, 1);
+    expect(service.disposals, 0);
+  });
+  test('interrupção mantém posição e só retoma por ação explícita', () async {
+    await controller.playQueue(songs, 0);
+    await tick();
+    service.progress.add(const Duration(seconds: 12));
+    service.interrupted.add(null);
+    await tick();
     expect(controller.playing, isFalse);
+    expect(controller.position.inSeconds, 12);
+    final plays = service.plays;
+    await tick();
+    expect(service.plays, plays);
+    await controller.play();
+    await tick();
+    expect(controller.position.inSeconds, 12);
+    expect(controller.playing, isTrue);
   });
   test('descarte é único e ignora conclusão pendente', () async {
     service.pending = Completer<Duration?>();
