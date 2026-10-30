@@ -1,3 +1,11 @@
+import 'dart:async';
+
+import '../features/library/logic/library_controller.dart';
+import '../features/playlists/data/playlists_database.dart';
+import '../features/playlists/data/playlists_repository.dart';
+import '../features/playlists/logic/playlists_controller.dart';
+import '../features/playlists/view/playlists_scope.dart';
+
 import 'package:flutter/material.dart';
 
 import '../core/theme/app_theme.dart';
@@ -14,7 +22,9 @@ class RikoPlayerApp extends StatefulWidget {
     this.runtime,
     this.playbackService,
     this.libraryService,
+    this.playlistsRepository,
   });
+  final PlaylistsRepository? playlistsRepository;
   final PlaybackRuntime? runtime;
   final PlaybackService? playbackService;
   final MusicLibraryService? libraryService;
@@ -25,6 +35,8 @@ class RikoPlayerApp extends StatefulWidget {
 class _RikoPlayerAppState extends State<RikoPlayerApp> {
   late final PlaybackController _playback;
   late final MusicLibraryService _library;
+  late final LibraryController _catalog;
+  late final PlaylistsController _playlists;
   @override
   void initState() {
     super.initState();
@@ -35,10 +47,20 @@ class _RikoPlayerAppState extends State<RikoPlayerApp> {
         widget.runtime?.library ??
         widget.libraryService ??
         MusicLibraryService();
+    _catalog = LibraryController(_library);
+    _playlists = PlaylistsController(
+      widget.playlistsRepository ??
+          SqlitePlaylistsRepository(PlaylistsDatabase()),
+    );
   }
 
   @override
   void dispose() {
+    _catalog.dispose();
+    _playlists.dispose();
+    if (widget.playlistsRepository == null) {
+      unawaited(_playlists.repository.close().catchError((Object _) {}));
+    }
     // Em produção, o serviço continua mesmo sem interface anexada.
     if (widget.runtime == null) {
       _playback.dispose();
@@ -51,12 +73,16 @@ class _RikoPlayerAppState extends State<RikoPlayerApp> {
   Widget build(BuildContext context) => PlaybackScope(
     controller: _playback,
     libraryService: _library,
-    child: MaterialApp(
-      title: 'Riko Player',
-      debugShowCheckedModeBanner: false,
-      darkTheme: AppTheme.dark,
-      themeMode: ThemeMode.dark,
-      home: const LibraryPage(),
+    child: PlaylistsScope(
+      controller: _playlists,
+      library: _catalog,
+      child: MaterialApp(
+        title: 'Riko Player',
+        debugShowCheckedModeBanner: false,
+        darkTheme: AppTheme.dark,
+        themeMode: ThemeMode.dark,
+        home: const LibraryPage(),
+      ),
     ),
   );
 }

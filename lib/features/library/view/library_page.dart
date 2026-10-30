@@ -4,7 +4,7 @@ import '../../playback/view/miniplayer.dart';
 
 import '../../settings/view/settings_page.dart';
 import 'library_content.dart';
-import 'widgets/library_message.dart';
+import '../../playlists/view/playlists_content.dart';
 
 class LibraryPage extends StatefulWidget {
   const LibraryPage({super.key});
@@ -15,6 +15,7 @@ class LibraryPage extends StatefulWidget {
 
 class _LibraryPageState extends State<LibraryPage> {
   int _selectedIndex = 0;
+  bool _playlistsOpened = false;
 
   @override
   Widget build(BuildContext context) {
@@ -50,19 +51,12 @@ class _LibraryPageState extends State<LibraryPage> {
         bottom: false,
         child: IndexedStack(
           index: _selectedIndex,
-          children: const [
-            LibraryContent(),
-            CustomScrollView(
-              slivers: [
-                SliverToBoxAdapter(
-                  child: LibraryMessage(
-                    icon: Icons.queue_music,
-                    title: 'Nenhuma playlist por aqui',
-                    description: 'Suas playlists aparecerão aqui quando essa funcionalidade estiver disponível.',
-                  ),
-                ),
-              ],
-            ),
+          children: [
+            const LibraryContent(),
+            if (_playlistsOpened)
+              const PlaylistsContent()
+            else
+              const SizedBox.shrink(),
           ],
         ),
       ),
@@ -74,7 +68,10 @@ class _LibraryPageState extends State<LibraryPage> {
             selectedIndex: _selectedIndex,
             onDestinationSelected: (index) {
               FocusManager.instance.primaryFocus?.unfocus();
-              setState(() => _selectedIndex = index);
+              setState(() {
+                _selectedIndex = index;
+                if (index == 1) _playlistsOpened = true;
+              });
             },
             destinations: const [
               NavigationDestination(
