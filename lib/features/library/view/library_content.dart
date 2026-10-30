@@ -1,3 +1,5 @@
+import '../../playlists/view/playlists_scope.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../playback/view/playback_scope.dart';
@@ -19,17 +21,24 @@ class LibraryContent extends StatefulWidget {
 class _LibraryContentState extends State<LibraryContent>
     with WidgetsBindingObserver {
   late final LibraryController _controller;
+  late final bool _ownsController;
 
   @override
   void initState() {
     super.initState();
-    _controller = LibraryController(
-      widget.service ??
-          context
-              .getInheritedWidgetOfExactType<PlaybackScope>()
-              ?.libraryService ??
-          MusicLibraryService(),
-    );
+    final shared = widget.service == null
+        ? context.getInheritedWidgetOfExactType<PlaylistsScope>()?.library
+        : null;
+    _ownsController = shared == null;
+    _controller =
+        shared ??
+        LibraryController(
+          widget.service ??
+              context
+                  .getInheritedWidgetOfExactType<PlaybackScope>()
+                  ?.libraryService ??
+              MusicLibraryService(),
+        );
     WidgetsBinding.instance.addObserver(this);
     _controller.load(requestPermission: true);
   }
@@ -45,7 +54,7 @@ class _LibraryContentState extends State<LibraryContent>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _controller.dispose();
+    if (_ownsController) _controller.dispose();
     super.dispose();
   }
 

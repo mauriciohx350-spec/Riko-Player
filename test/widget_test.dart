@@ -1,3 +1,5 @@
+import 'support/memory_playlists_repository.dart';
+
 import 'package:flutter/material.dart';
 
 import 'package:flutter/services.dart';
@@ -35,7 +37,9 @@ void main() {
   testWidgets('Shows the empty library with the global dark theme', (
     tester,
   ) async {
-    await tester.pumpWidget(const RikoPlayerApp());
+    await tester.pumpWidget(
+      RikoPlayerApp(playlistsRepository: MemoryPlaylistsRepository()),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Riko Player'), findsOneWidget);
@@ -66,7 +70,9 @@ void main() {
   testWidgets('Accepts search text and preserves it when changing tabs', (
     tester,
   ) async {
-    await tester.pumpWidget(const RikoPlayerApp());
+    await tester.pumpWidget(
+      RikoPlayerApp(playlistsRepository: MemoryPlaylistsRepository()),
+    );
     await tester.pumpAndSettle();
     expect(find.text('Pesquisar músicas'), findsOneWidget);
     await tester.enterText(find.byType(TextField), 'Minha música');
@@ -87,7 +93,9 @@ void main() {
   });
 
   testWidgets('Opens settings and returns to the library', (tester) async {
-    await tester.pumpWidget(const RikoPlayerApp());
+    await tester.pumpWidget(
+      RikoPlayerApp(playlistsRepository: MemoryPlaylistsRepository()),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Configurações'));
     await tester.pumpAndSettle();
@@ -115,7 +123,9 @@ void main() {
     tester.platformDispatcher.textScaleFactorTestValue = 1.5;
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
 
-    await tester.pumpWidget(const RikoPlayerApp());
+    await tester.pumpWidget(
+      RikoPlayerApp(playlistsRepository: MemoryPlaylistsRepository()),
+    );
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
 

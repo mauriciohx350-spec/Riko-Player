@@ -1,3 +1,5 @@
+import 'support/memory_playlists_repository.dart';
+
 import 'package:device_audio_query/device_audio_query.dart';
 import 'package:riko_player/features/library/view/widgets/song_artwork.dart';
 import 'package:flutter/material.dart';
@@ -37,6 +39,7 @@ void main() {
     final audio = FakePlaybackService();
     await tester.pumpWidget(
       RikoPlayerApp(
+        playlistsRepository: MemoryPlaylistsRepository(),
         playbackService: audio,
         libraryService: TestMusicService()..result = tracks,
       ),
@@ -132,7 +135,11 @@ void main() {
     final audio = FakePlaybackService();
     final library = TestMusicService()..result = songs;
     await tester.pumpWidget(
-      RikoPlayerApp(playbackService: audio, libraryService: library),
+      RikoPlayerApp(
+        playlistsRepository: MemoryPlaylistsRepository(),
+        playbackService: audio,
+        libraryService: library,
+      ),
     );
     await tester.pumpAndSettle();
     expect(find.byType(Miniplayer), findsOneWidget);
@@ -213,6 +220,7 @@ void main() {
     final audio = FakePlaybackService()..fail = true;
     await tester.pumpWidget(
       RikoPlayerApp(
+        playlistsRepository: MemoryPlaylistsRepository(),
         playbackService: audio,
         libraryService: TestMusicService()..result = songs,
       ),

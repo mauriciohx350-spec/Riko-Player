@@ -21,6 +21,7 @@ class LibraryController extends ChangeNotifier {
   bool _disposed = false;
 
   List<SongModel> get songs => _visibleSongs;
+  List<SongModel> get allSongs => _songs;
   bool get isEmpty => _songs.isEmpty;
   bool get isLoading => _loading;
   bool get isRefreshing => _loading && status == LibraryStatus.ready;
