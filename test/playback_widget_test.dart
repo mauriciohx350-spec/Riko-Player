@@ -185,10 +185,16 @@ void main() {
 
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
     await tester.pump();
-    expect(controller.playing, isFalse);
+    expect(controller.playing, isTrue);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+    expect(controller.playing, isTrue);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await tester.pumpAndSettle();
-    expect(controller.playing, isFalse);
+    expect(controller.playing, isTrue);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpAndSettle();
     expect(audio.disposals, 1);
@@ -220,7 +226,7 @@ void main() {
       find.descendant(of: find.byType(Miniplayer), matching: find.text('Um')),
     );
     await tester.pumpAndSettle();
-    expect(find.textContaining('O arquivo pode ter sido'), findsOneWidget);
+    expect(find.textContaining('Verifique o arquivo'), findsOneWidget);
     expect(tester.widget<Slider>(find.byType(Slider)).onChanged, isNull);
     final retry = find.byTooltip('Tentar novamente');
     await tester.ensureVisible(retry);
@@ -229,10 +235,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byTooltip('Pausar'), findsOneWidget);
     expect(tester.takeException(), isNull);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.detached);
+    expect(audio.disposals, 0);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpAndSettle();
     expect(audio.disposals, 1);
-    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
   });
 }

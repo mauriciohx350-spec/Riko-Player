@@ -1,8 +1,10 @@
-﻿import 'package:flutter/widgets.dart';
+import 'package:flutter/widgets.dart';
 
 import 'app/app.dart';
+import 'features/playback/logic/playback_runtime.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const RikoPlayerApp());
+  final runtime = await PlaybackRuntime.initialize();
+  runApp(RikoPlayerApp(runtime: runtime));
 }
