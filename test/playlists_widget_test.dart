@@ -60,6 +60,8 @@ void main() {
       await tester.tap(find.text('Reproduzir'));
       await tester.pumpAndSettle();
       expect(playback.queue.map((song) => song.id), [1, 2]);
+      playback.setShuffle(true);
+      final activeQueue = playback.queue;
       await tester.tap(find.byTooltip('Adicionar músicas'));
       await tester.pumpAndSettle();
       expect(find.text('Já adicionada'), findsNWidgets(2));
@@ -99,6 +101,11 @@ void main() {
       await tester.tap(find.text('Excluir'));
       await tester.pumpAndSettle();
       expect(repository.data, isEmpty);
+      expect(playback.queue, same(activeQueue));
+      expect(playback.shuffleEnabled, isTrue);
+      await playback.next();
+      await tester.pumpAndSettle();
+      expect(playback.song?.id, 2);
       expect(playback.queue.length, 2);
       expect(playback.playing, isTrue);
       expect(tester.takeException(), isNull);

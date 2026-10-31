@@ -1,5 +1,7 @@
 import 'support/memory_playlists_repository.dart';
 
+import 'package:riko_player/features/playback/logic/playback_controller.dart';
+
 import 'package:device_audio_query/device_audio_query.dart';
 import 'package:riko_player/features/library/view/widgets/song_artwork.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +15,80 @@ import 'library_test.dart' show TestMusicService;
 import 'playback_test.dart' show FakePlaybackService, songs;
 
 void main() {
+  testWidgets(
+    'full player modes preserve paused position and compact controls',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 700);
+      tester.view.devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 1.5;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      final service = FakePlaybackService();
+      await tester.pumpWidget(
+        RikoPlayerApp(
+          playlistsRepository: MemoryPlaylistsRepository(),
+          playbackService: service,
+          libraryService: TestMusicService()..result = songs,
+        ),
+      );
+      await tester.pumpAndSettle();
+      final mini = find.byType(Miniplayer);
+      final controller = PlaybackScope.of(tester.element(mini)).controller;
+      await controller.playQueue(songs, 0);
+      await tester.pumpAndSettle();
+      service.progress.add(const Duration(seconds: 23));
+      await controller.pause();
+      await tester.pump();
+      expect(find.byIcon(Icons.shuffle_rounded), findsNothing);
+      await tester.tap(find.descendant(of: mini, matching: find.text('Um')));
+      await tester.pumpAndSettle();
+      final loads = service.loaded.length;
+      final shuffle = find.byTooltip('Ativar Shuffle');
+      await tester.ensureVisible(shuffle);
+      await tester.tap(shuffle);
+      await tester.pumpAndSettle();
+      final shuffleButton = tester.widget<IconButton>(
+        find.widgetWithIcon(IconButton, Icons.shuffle_rounded),
+      );
+      expect(shuffleButton.isSelected, isTrue);
+      expect(shuffleButton.color, const Color(0xFF9B8AFB));
+      final shuffleIcon = tester.element(find.byIcon(Icons.shuffle_rounded));
+      expect(IconTheme.of(shuffleIcon).color, const Color(0xFF9B8AFB));
+      await tester.tap(find.byTooltip('Repetição desligada'));
+      await tester.pumpAndSettle();
+      expect(controller.repeatMode, PlaybackRepeatMode.all);
+      expect(
+        tester
+            .widget<IconButton>(
+              find.widgetWithIcon(IconButton, Icons.repeat_rounded),
+            )
+            .color,
+        const Color(0xFF9B8AFB),
+      );
+      await tester.tap(find.byTooltip('Repetir todas'));
+      await tester.pumpAndSettle();
+      expect(controller.repeatMode, PlaybackRepeatMode.one);
+      expect(find.byIcon(Icons.repeat_one_rounded), findsOneWidget);
+      await tester.tap(find.byTooltip('Repetir uma'));
+      await tester.pumpAndSettle();
+      expect(controller.repeatMode, PlaybackRepeatMode.off);
+      await tester.tap(find.byTooltip('Desativar Shuffle'));
+      await tester.pumpAndSettle();
+      expect(controller.shuffleEnabled, isFalse);
+      expect(controller.position.inSeconds, 23);
+      expect(controller.playing, isFalse);
+      expect(service.loaded.length, loads);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.shuffle_rounded), findsNothing);
+      expect(find.byKey(const ValueKey('miniplayer-progress')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    },
+  );
+
   testWidgets('miniplayer mantém controles e progresso em tela pequena', (
     tester,
   ) async {

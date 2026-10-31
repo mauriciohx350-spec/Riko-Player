@@ -87,6 +87,90 @@ void main() {
         expect(controller.index, 0);
       },
     );
+
+    test(
+      'modes synchronize in both directions without changing queue or playback',
+      () async {
+        await controller.playQueue(songs, 1);
+        await handler.pause();
+        final queue = handler.queue.value;
+        final loads = service.loaded.length;
+        await handler.setShuffleMode(AudioServiceShuffleMode.all);
+        expect(controller.shuffleEnabled, isTrue);
+        expect(
+          handler.playbackState.value.shuffleMode,
+          AudioServiceShuffleMode.all,
+        );
+        await handler.setShuffleMode(AudioServiceShuffleMode.none);
+        await handler.setRepeatMode(AudioServiceRepeatMode.one);
+        expect(controller.repeatMode, PlaybackRepeatMode.one);
+        expect(
+          handler.playbackState.value.repeatMode,
+          AudioServiceRepeatMode.one,
+        );
+        expect(
+          handler.playbackState.value.controls,
+          isNot(contains(MediaControl.skipToNext)),
+        );
+        await handler.setRepeatMode(AudioServiceRepeatMode.group);
+        expect(controller.repeatMode, PlaybackRepeatMode.all);
+        expect(
+          handler.playbackState.value.repeatMode,
+          AudioServiceRepeatMode.all,
+        );
+        expect(
+          handler.playbackState.value.controls,
+          contains(MediaControl.skipToNext),
+        );
+        controller.setShuffle(false);
+        controller.setRepeatMode(PlaybackRepeatMode.off);
+        expect(
+          handler.playbackState.value.shuffleMode,
+          AudioServiceShuffleMode.none,
+        );
+        expect(
+          handler.playbackState.value.repeatMode,
+          AudioServiceRepeatMode.none,
+        );
+        await handler.setShuffleMode(AudioServiceShuffleMode.group);
+        expect(controller.shuffleEnabled, isTrue);
+        await handler.setShuffleMode(AudioServiceShuffleMode.none);
+        await handler.setRepeatMode(AudioServiceRepeatMode.none);
+        expect(controller.shuffleEnabled, isFalse);
+        expect(controller.repeatMode, PlaybackRepeatMode.off);
+        expect(handler.queue.value, same(queue));
+        expect(handler.playbackState.value.queueIndex, 1);
+        expect(handler.playbackState.value.playing, isFalse);
+        expect(service.loaded.length, loads);
+      },
+    );
+
+    test(
+      'remote next ignores repeat one and repeat all wraps with original index',
+      () async {
+        await controller.playQueue(songs, 0);
+        await handler.setRepeatMode(AudioServiceRepeatMode.one);
+        await handler.skipToNext();
+        expect(controller.index, 1);
+        expect(handler.playbackState.value.queueIndex, 1);
+        await handler.setRepeatMode(AudioServiceRepeatMode.all);
+        await handler.skipToNext();
+        expect(controller.index, 0);
+        expect(handler.mediaItem.value?.id, songs[0].uri);
+        await handler.skipToPrevious();
+        expect(controller.index, 1);
+        await handler.stop();
+        expect(
+          handler.playbackState.value.repeatMode,
+          AudioServiceRepeatMode.all,
+        );
+        expect(
+          handler.playbackState.value.processingState,
+          AudioProcessingState.idle,
+        );
+      },
+    );
+
     test('capa antiga não substitui faixa nova e não bloqueia áudio', () async {
       await controller.playQueue(songs, 0);
       await tick();
