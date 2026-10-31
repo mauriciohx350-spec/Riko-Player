@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:device_audio_query/device_audio_query.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -60,6 +61,54 @@ void main() {
   late Directory folder;
   late PlaylistsDatabase database;
   late SqlitePlaylistsRepository repository;
+
+  test('shuffle keeps SQLite order and active traversal isolated from playlist edits', () async {
+    final playlist = await repository.create('Shuffle');
+    await repository.add(playlist.id, playlistSongs);
+    final library = LibraryController(
+      TestMusicService()..result = playlistSongs,
+    );
+    final playback = PlaybackController(
+      FakePlaybackService(),
+      random: Random(41),
+    );
+    final reference = PlaybackController(
+      FakePlaybackService(),
+      random: Random(41),
+    );
+    addTearDown(library.dispose);
+    addTearDown(playback.dispose);
+    addTearDown(reference.dispose);
+    await library.load();
+    final original = (await repository.read(playlist.id))!.tracks;
+    playback.setShuffle(true);
+    reference.setShuffle(true);
+    await PlaylistSongResolver().play(original, library, playback);
+    await reference.playQueue(playlistSongs, 0);
+    expect(
+      (await repository.read(playlist.id))!.tracks.map((e) => e.id),
+      original.map((e) => e.id),
+    );
+    final queue = playback.queue;
+    await repository.sort(playlist.id, PlaylistSort.title);
+    expect((await repository.read(playlist.id))!.tracks.first.mediaId, 2);
+    await repository.rename(playlist.id, 'Edited');
+    await repository.remove(playlist.id, original[1].id);
+    await repository.delete(playlist.id);
+    expect(playback.queue, same(queue));
+    expect(playback.queue, playlistSongs);
+    while (reference.hasNext) {
+      await playback.next();
+      await reference.next();
+      expect(playback.index, reference.index);
+    }
+    expect(playback.hasNext, isFalse);
+    await playback.previous();
+    await reference.previous();
+    expect(playback.index, reference.index);
+    expect(playback.queue, playlistSongs);
+  });
+
   setUp(() async {
     folder = await Directory.systemTemp.createTemp('riko_playlists_test_');
     database = PlaylistsDatabase(

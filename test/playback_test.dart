@@ -38,6 +38,7 @@ class FakePlaybackService implements PlaybackService {
   Future<Duration?> load(Uri uri) async {
     loaded.add(uri);
     if (fail) throw StateError('arquivo ausente');
+    state.add(const PlaybackEvent(PlaybackPhase.ready, false));
     return pending == null ? const Duration(seconds: 60) : pending!.future;
   }
 

@@ -59,6 +59,49 @@ class PlaybackPage extends StatelessWidget {
                           ),
                           const SizedBox(height: 16),
                           PlaybackControls(controller: controller),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 24,
+                            alignment: WrapAlignment.center,
+                            children: [
+                              IconButton(
+                                tooltip: controller.shuffleEnabled
+                                    ? 'Desativar Shuffle'
+                                    : 'Ativar Shuffle',
+                                isSelected: controller.shuffleEnabled,
+                                color: controller.shuffleEnabled
+                                    ? const Color(0xFF9B8AFB)
+                                    : null,
+                                onPressed: () => controller.setShuffle(
+                                  !controller.shuffleEnabled,
+                                ),
+                                icon: const Icon(Icons.shuffle_rounded),
+                              ),
+                              IconButton(
+                                tooltip: switch (controller.repeatMode) {
+                                  PlaybackRepeatMode.off =>
+                                    'Repetição desligada',
+                                  PlaybackRepeatMode.all => 'Repetir todas',
+                                  PlaybackRepeatMode.one => 'Repetir uma',
+                                },
+                                isSelected:
+                                    controller.repeatMode !=
+                                    PlaybackRepeatMode.off,
+                                color:
+                                    controller.repeatMode !=
+                                        PlaybackRepeatMode.off
+                                    ? const Color(0xFF9B8AFB)
+                                    : null,
+                                onPressed: controller.cycleRepeatMode,
+                                icon: Icon(
+                                  controller.repeatMode ==
+                                          PlaybackRepeatMode.one
+                                      ? Icons.repeat_one_rounded
+                                      : Icons.repeat_rounded,
+                                ),
+                              ),
+                            ],
+                          ),
                           if (controller.error != null)
                             Padding(
                               padding: const EdgeInsets.only(top: 24),

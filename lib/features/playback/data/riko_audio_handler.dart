@@ -102,6 +102,14 @@ class RikoAudioHandler extends BaseAudioHandler {
         updatePosition: controller.position,
         bufferedPosition: controller.position,
         speed: 1,
+        shuffleMode: controller.shuffleEnabled
+            ? AudioServiceShuffleMode.all
+            : AudioServiceShuffleMode.none,
+        repeatMode: switch (controller.repeatMode) {
+          PlaybackRepeatMode.off => AudioServiceRepeatMode.none,
+          PlaybackRepeatMode.all => AudioServiceRepeatMode.all,
+          PlaybackRepeatMode.one => AudioServiceRepeatMode.one,
+        },
         queueIndex: controller.index < 0 ? null : controller.index,
         errorCode: controller.error == null ? null : 1,
         errorMessage: controller.error,
@@ -118,6 +126,21 @@ class RikoAudioHandler extends BaseAudioHandler {
     } catch (_) {
       // Sem capa, preserva os metadados e a reprodução.
     }
+  }
+
+  @override
+  Future<void> setShuffleMode(AudioServiceShuffleMode shuffleMode) async {
+    controller.setShuffle(shuffleMode != AudioServiceShuffleMode.none);
+  }
+
+  @override
+  Future<void> setRepeatMode(AudioServiceRepeatMode repeatMode) async {
+    controller.setRepeatMode(switch (repeatMode) {
+      AudioServiceRepeatMode.none => PlaybackRepeatMode.off,
+      AudioServiceRepeatMode.one => PlaybackRepeatMode.one,
+      AudioServiceRepeatMode.all ||
+      AudioServiceRepeatMode.group => PlaybackRepeatMode.all,
+    });
   }
 
   @override

@@ -1,13 +1,39 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:device_audio_query/device_audio_query.dart';
 import 'package:flutter/foundation.dart';
 
 import '../data/audio_playback_service.dart';
+import 'playback_order.dart';
+
+/// Repeat One afeta somente o término automático, nunca os botões.
+enum PlaybackRepeatMode { off, all, one }
 
 /// Fonte única da fila e do estado, independente do ciclo de vida da interface.
 class PlaybackController extends ChangeNotifier {
-  PlaybackController(this._service);
+  PlaybackController(this._service, {Random? random})
+    : _order = PlaybackOrder(random: random);
+  final PlaybackOrder _order;
+  PlaybackRepeatMode _repeatMode = PlaybackRepeatMode.off;
+  PlaybackRepeatMode get repeatMode => _repeatMode;
+  bool get shuffleEnabled => _order.shuffle;
+  bool _completionArmed = false;
+
+  void setShuffle(bool enabled) {
+    if (_disposed || enabled == shuffleEnabled) return;
+    _order.setShuffle(enabled);
+    _notify();
+  }
+
+  void setRepeatMode(PlaybackRepeatMode mode) {
+    if (_disposed || mode == _repeatMode) return;
+    _repeatMode = mode;
+    _notify();
+  }
+
+  void cycleRepeatMode() =>
+      setRepeatMode(PlaybackRepeatMode.values[(_repeatMode.index + 1) % 3]);
   final PlaybackService _service;
   final List<StreamSubscription<dynamic>> _subscriptions = [];
   List<SongModel> _queue = const [];
@@ -30,7 +56,8 @@ class PlaybackController extends ChangeNotifier {
   int _playRequest = 0;
   int _seekRequest = 0;
   Future<void> _pending = Future.value();
-  bool get hasNext => _index >= 0 && _index + 1 < _queue.length;
+  bool get hasNext =>
+      song != null && (_order.hasNext || _repeatMode == PlaybackRepeatMode.all);
 
   static Uri sourceFor(SongModel song) {
     final uri = Uri.tryParse(song.uri ?? '');
@@ -52,15 +79,22 @@ class PlaybackController extends ChangeNotifier {
     _started = true;
     _subscriptions.add(
       _service.events.listen((event) {
-        if (_disposed || loading || stopped || error != null) {
+        if (_disposed || stopped || error != null) return;
+        if (event.phase == PlaybackPhase.ready) _completionArmed = true;
+        if (loading) {
           return;
         }
+        // Uma conclusão só é aceita após ready/seek da fonte atual.
+        if (event.phase == PlaybackPhase.completed && !_completionArmed) return;
         playing = event.playing && _wantsPlay;
         buffering = event.phase == PlaybackPhase.loading;
-        if (event.phase == PlaybackPhase.completed && !completed) {
+        if (event.phase == PlaybackPhase.completed && _completionArmed) {
+          _completionArmed = false;
           completed = true;
           playing = false;
-          if (hasNext && _wantsPlay) {
+          if (_wantsPlay && _repeatMode == PlaybackRepeatMode.one) {
+            unawaited(_select(_index));
+          } else if (hasNext && _wantsPlay) {
             unawaited(next());
           } else {
             unawaited(pause());
@@ -112,10 +146,12 @@ class PlaybackController extends ChangeNotifier {
   Future<void> playQueue(List<SongModel> songs, int index) {
     if (_disposed || index < 0 || index >= songs.length) return Future.value();
     _queue = List.unmodifiable(songs);
+    _order.reset(songs.length, index);
     return _select(index);
   }
 
   Future<void> _select(int index) {
+    _completionArmed = false;
     final generation = ++_generation;
     final selectedSong = _queue[index];
     _playRequest++;
@@ -136,6 +172,7 @@ class PlaybackController extends ChangeNotifier {
         _listen();
         await _service.pause();
         if (_disposed || generation != _generation) return;
+        _completionArmed = false;
         final loadedDuration = await _service.load(sourceFor(selectedSong));
         if (_disposed || generation != _generation) return;
         duration = loadedDuration;
@@ -232,11 +269,17 @@ class PlaybackController extends ChangeNotifier {
   }
 
   Future<void> next() async {
-    if (!_disposed && hasNext) await _select(_index + 1);
+    if (_disposed) return;
+    final selected = _order.next(
+      repeatAll: _repeatMode == PlaybackRepeatMode.all,
+    );
+    if (selected != null) await _select(selected);
   }
 
   Future<void> previous() async {
-    if (!_disposed && song != null) await _select(_index > 0 ? _index - 1 : 0);
+    if (_disposed) return;
+    final selected = _order.previous();
+    if (selected != null) await _select(selected);
   }
 
   Future<void> seek(Duration value) async {
@@ -255,6 +298,7 @@ class PlaybackController extends ChangeNotifier {
       if (request != _seekRequest) return;
       position = Duration(milliseconds: milliseconds);
       completed = duration != null && position >= duration!;
+      if (!completed) _completionArmed = true;
       _notify();
     } catch (_) {
       if (generation == _generation) reportError();

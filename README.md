@@ -49,7 +49,8 @@ O desenvolvimento prioriza organização do código, desempenho, gerenciamento d
 - Reprodução de músicas locais utilizando `just_audio`.
 - Reprodução a partir da biblioteca ou de playlists.
 - Controles de reproduzir, pausar, avançar e voltar.
-- Fila de reprodução sequencial.
+- Fila de reprodução sequencial ou aleatória (Shuffle).
+- Repeat Off, All e One, com histórico de navegação.
 - Miniplayer com informações da música e controles.
 - Barra de progresso no miniplayer.
 - Tela completa com barra de progresso interativa.
@@ -180,12 +181,61 @@ flutter build apk --debug
 
 As funcionalidades principais também foram testadas em um dispositivo Android físico.
 
+
+## Shuffle e Repeat — etapa 8
+
+O `PlaybackController` decide todas as transições. `PlaybackOrder` mantém a ordem efetiva por índices, o histórico e os ciclos; a fila original permanece imutável. O `just_audio` continua recebendo uma fonte por vez, com uma única instância de `AudioPlayer`, sem ativar seus modos nativos de Shuffle/Loop.
+
+Os controles ficam somente na tela completa. Os estados ativos usam a cor `#9B8AFB`; o miniplayer preserva seus controles e progresso.
+
+### Shuffle e histórico
+
+- Ativar ou desativar Shuffle preserva a música, a posição e o estado de reprodução, sem recarregar o áudio.
+- Ao ativar, embaralha apenas as entradas ainda não visitadas no ciclo. Uma seleção inicial no meio da fila também permite visitar as músicas anteriores.
+- Anterior percorre o histórico; Próxima refaz o percurso quando o usuário volta. O futuro já percorrido é preservado ao alternar Shuffle.
+- Sem histórico, Anterior reinicia a faixa atual em Shuffle. No modo sequencial, mantém o comportamento anterior do aplicativo: seleciona a faixa precedente na fila original, quando existe.
+- Ao desativar, depois de refazer eventual histórico futuro, segue a ordem original a partir da última entrada desse percurso.
+- Com Repeat All, cada novo ciclo contém toda a fila e evita começar pela última faixa do ciclo anterior, quando há alternativa.
+- Voltar manualmente ou alternar Shuffle pode repetir faixas intencionalmente. Sem essas ações, cada entrada é visitada uma vez por ciclo.
+- Uma nova seleção explícita de biblioteca/playlist inicia outro percurso e preserva os modos escolhidos. Editar, ordenar ou excluir uma playlist não altera a fila ativa.
+
+### Modos de repetição
+
+O botão alterna entre **Off → All → One → Off**.
+
+| Modo | Término automático | Próxima manual |
+|---|---|---|
+| Off | Avança; encerra na última faixa | Avança; sem ação no fim |
+| All | Avança; inicia outro ciclo no fim | Avança; inicia outro ciclo no fim |
+| One | Reinicia somente a música atual | Mesmo comportamento de Off |
+
+Anterior sempre usa as regras de histórico descritas acima. Repeat One não bloqueia a navegação manual nem acrescenta repetições automáticas ao histórico.
+
+- Filas vazias não carregam áudio; uma única faixa encerra em Off e repete em All/One.
+- Trocar modos enquanto pausado não inicia a reprodução.
+- Erros interrompem a reprodução e permitem tentar novamente ou avançar manualmente; não há tentativas automáticas infinitas.
+- Interrupções e perda de foco continuam pausando sem retomada automática.
+- Reinícios automáticos passam pelo carregamento protegido do controller; esta etapa não oferece repetição sem intervalo audível.
+- Os modos duram enquanto o runtime existe, inclusive em segundo plano e ao trocar de telas. Após encerrar o processo, os padrões são Shuffle desligado e Repeat Off. Não há persistência de preferências nesta etapa.
+
+### Integração Android e validação física
+
+O `RikoAudioHandler` publica os modos em `PlaybackState` e aceita `setShuffleMode`/`setRepeatMode`, delegando ao controller. O valor externo `group` é normalizado para `all`, pois não há grupos de reprodução. A fila Android mantém a ordem original e `queueIndex` identifica a faixa atual nessa fila.
+
+A presença de botões para esses modos depende do cliente Android. No Redmi 13C, validar:
+
+- Notificação e tela de bloqueio: play/pause, anterior/próxima, metadados e atualização de faixa nos modos combinados.
+- Shuffle + All por mais de um ciclo, incluindo uma fila com somente uma música.
+- Repeat One ao terminar uma música e ao usar os botões manuais.
+- Reprodução com tela apagada, aplicativo minimizado e após remoção da tarefa enquanto toca.
+- Chamadas, outro aplicativo obtendo foco e desconexão de fone: pausa sem retomada inesperada.
+- Arquivo removido/permissão revogada e comandos rápidos durante troca de faixa.
+- Controles na tela completa e progresso do miniplayer com fontes ampliadas.
+
 ## Próximas funcionalidades
 
 O desenvolvimento continuará com:
 
-- Reprodução aleatória (*shuffle*).
-- Modos de repetição de música e fila.
 - Melhorias nas configurações do player.
 - Refinamentos de desempenho e estabilidade.
 - Reformulação da interface e melhorias de experiência do usuário.
